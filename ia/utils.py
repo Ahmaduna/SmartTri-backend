@@ -1,82 +1,47 @@
-import tensorflow as tf
 import numpy as np
-from tensorflow.keras.applications.resnet50 import preprocess_input # type: ignore
+import tensorflow as tf  # Facultatif ici, juste pour garder les dépendances si nécessaire
+from tensorflow.keras.applications.resnet50 import preprocess_input  # type: ignore
 import os
 from django.conf import settings
 
 class WasteClassifier:
     def __init__(self):
-        # Load the model when initializing the class
-        model_path = os.path.join(settings.BASE_DIR, 'model', 'fine_tuned_resnet50.keras')
-        self.model = tf.keras.models.load_model(model_path)
+        # Ne pas charger de modèle
+        print("⚠️ Aucun modèle chargé – les prédictions seront simulées.")
         
-        # Define class names
+        # Définir les classes comme avant
         self.class_names = ['bleue', 'jaune', 'marron', 'noire', 'rouge', 'special', 'verte']
-        
+
     def load_and_preprocess_image(self, image_file, img_size=(224, 224)):
         """
-        Load and preprocess an image file for prediction
+        Simule la lecture d'image – pas utile sans le modèle, mais garde la signature.
         """
-        # Read the image file into a tensor
-        img_bytes = image_file.read()
-        img = tf.io.decode_image(img_bytes, channels=3)
-        
-        # Resize the image
-        img = tf.image.resize(img, img_size)
-        
-        # Preprocess the image for ResNet50
-        img = preprocess_input(img)
-        
-        # Add batch dimension
-        img = tf.expand_dims(img, axis=0)
-        return img
+        return None  # Pas besoin de traitement réel
 
     def predict_image(self, image_file, confidence_threshold=2):
         """
-        Predict the waste category for an uploaded image and return all class scores.
+        Simule une prédiction factice et retourne une classe aléatoire.
         """
         try:
-            # Preprocess the image
-            img_tensor = self.load_and_preprocess_image(image_file)
-            
-            # Make prediction
-            predictions = self.model.predict(img_tensor)[0]  # Extract first batch prediction
-            
-            # Get all confidence scores
-            confidence_scores = {self.class_names[i]: float(score) for i, score in enumerate(predictions)}
-            print(confidence_scores)
-            
-            # Get top predicted class
-            predicted_class_index = np.argmax(predictions)
-            confidence_score = float(predictions[predicted_class_index])
-            
-            # Check confidence threshold
-            if confidence_score >= confidence_threshold:
-                predicted_class = self.class_names[predicted_class_index]
-                # Get the bin score and product type
-                bin_score = get_bin_score(predicted_class)
-                product_type = get_product_type(predicted_class)
-                
-                return {
-                    'success': True,
-                    'predicted_class': predicted_class,
-                    'confidence_score': confidence_score,
-                    'all_scores': confidence_scores,
-                    'bin_score': bin_score,
-                    'product_type': product_type,
-                    'error': None
-                }
-            else:
-                return {
-                    'success': False,
-                    'predicted_class': None,
-                    'confidence_score': confidence_score,
-                    'all_scores': confidence_scores,
-                    'bin_score': None,
-                    'product_type': get_product_type("unknown"),
-                    'error': 'Low confidence prediction'
-                }
-                
+            # Simulation d'une classe prédite
+            predicted_class_index = np.random.randint(len(self.class_names))
+            predicted_class = self.class_names[predicted_class_index]
+            confidence_score = float(np.round(np.random.uniform(2.1, 5.0), 2))  # Toujours au-dessus du seuil
+            confidence_scores = {
+                cls: float(np.round(np.random.uniform(0.1, 5.0), 2))
+                for cls in self.class_names
+            }
+
+            return {
+                'success': True,
+                'predicted_class': predicted_class,
+                'confidence_score': confidence_score,
+                'all_scores': confidence_scores,
+                'bin_score': get_bin_score(predicted_class),
+                'product_type': get_product_type(predicted_class),
+                'error': None
+            }
+
         except Exception as e:
             return {
                 'success': False,
@@ -87,7 +52,6 @@ class WasteClassifier:
                 'product_type': get_product_type("unknown"),
                 'error': str(e)
             }
-
 
 ##################################################################
 # HELPER FUNCTIONS
@@ -121,5 +85,5 @@ def get_product_type(bin_color: str) -> str:
     }
     return product_types.get(bin_color, "Unknown")
 
-# Create a singleton instance
+# Créer une instance unique du classificateur
 waste_classifier = WasteClassifier()
